@@ -26,6 +26,14 @@ from dialogs.agregar_usuario_dialog import AgregarUsuarioDialog
 from dialogs.prestar_libro_dialog import PrestarLibroDialog
 from dialogs.editar_libro_dialog import EditarLibroDialog
 from dialogs.editar_usuario_dialog import EditarUsuarioDialog
+import logging
+
+# Configurar logging
+logging.basicConfig(
+    filename='biblioteca.log',
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 class BibliotecaGUI(QMainWindow):
     def __init__(self):
@@ -309,6 +317,7 @@ class BibliotecaGUI(QMainWindow):
         
     def mostrar_prestar_libro(self):
         if self.libros.esta_vacia():
+            logging.warning("Intento de préstamo sin libros registrados")
             QMessageBox.warning(self, "Error", "No hay libros registrados")
             return
         if self.usuarios.esta_vacia():

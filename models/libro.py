@@ -8,6 +8,9 @@ class Libro:
         
     def __str__(self):
         return f"{self.titulo} - {self.autor} (ISBN: {self.isbn})"
+    
+    def get_id(self):
+        return self.isbn
         
     def prestar(self, usuario):
         if self.cantidad_disponible > 0:

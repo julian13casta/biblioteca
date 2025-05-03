@@ -20,7 +20,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPalette, QColor, QFont
 from models.libro import Libro
 from models.usuario import Usuario
-from estructuras.lista_enlazada import ListaEnlazada
+from estructuras.arbol_binario_busqueda import ArbolBinarioBusqueda
 from dialogs.agregar_libro_dialog import AgregarLibroDialog
 from dialogs.agregar_usuario_dialog import AgregarUsuarioDialog
 from dialogs.prestar_libro_dialog import PrestarLibroDialog
@@ -45,8 +45,8 @@ class BibliotecaGUI(QMainWindow):
         self.configurar_estilo()
         
         # Inicializar estructuras de datos
-        self.libros = ListaEnlazada()
-        self.usuarios = ListaEnlazada()
+        self.libros = ArbolBinarioBusqueda()
+        self.usuarios = ArbolBinarioBusqueda()
         
         # Configurar la interfaz
         self.configurar_ui()
@@ -214,55 +214,51 @@ class BibliotecaGUI(QMainWindow):
         
     def actualizar_tabla_libros(self):
         self.tabla_libros.setRowCount(0)
-        actual = self.libros.cabeza
-        row = 0
-        while actual:
-            libro = actual.dato
+        self._recorrer_arbol_libros(self.libros.raiz, 0)
+        
+    def _recorrer_arbol_libros(self, nodo, row):
+        if nodo is not None:
+            row = self._recorrer_arbol_libros(nodo.izquierda, row)
+            libro = nodo.dato
             self.tabla_libros.insertRow(row)
-            self.tabla_libros.setRowHeight(row, 50)  # Establecer altura de la fila
+            self.tabla_libros.setRowHeight(row, 50)
             self.tabla_libros.setItem(row, 0, QTableWidgetItem(libro.titulo))
             self.tabla_libros.setItem(row, 1, QTableWidgetItem(libro.autor))
             self.tabla_libros.setItem(row, 2, QTableWidgetItem(libro.isbn))
             self.tabla_libros.setItem(row, 3, QTableWidgetItem(str(libro.cantidad_disponible)))
-            
-            # Botón Editar
             btn_editar = QPushButton("✏️ Editar")
             btn_editar.clicked.connect(lambda checked, l=libro: self.editar_libro(l))
             self.tabla_libros.setCellWidget(row, 4, btn_editar)
-            
-            # Botón Eliminar
             btn_eliminar = QPushButton("❌ Eliminar")
             btn_eliminar.clicked.connect(lambda checked, l=libro: self.eliminar_libro(l))
             self.tabla_libros.setCellWidget(row, 5, btn_eliminar)
-            
             row += 1
-            actual = actual.siguiente
-            
+            row = self._recorrer_arbol_libros(nodo.derecha, row)
+        return row
+
     def actualizar_tabla_usuarios(self):
         self.tabla_usuarios.setRowCount(0)
-        actual = self.usuarios.cabeza
-        row = 0
-        while actual:
-            usuario = actual.dato
+        self._recorrer_arbol_usuarios(self.usuarios.raiz, 0)
+    
+    def _recorrer_arbol_usuarios(self, nodo, row):
+        if nodo is not None:
+            row = self._recorrer_arbol_usuarios(nodo.izquierda, row)
+            usuario = nodo.dato
             self.tabla_usuarios.insertRow(row)
-            self.tabla_usuarios.setRowHeight(row, 50)  # Establecer altura de la fila
+            self.tabla_usuarios.setRowHeight(row, 50)
             self.tabla_usuarios.setItem(row, 0, QTableWidgetItem(usuario.nombre))
             self.tabla_usuarios.setItem(row, 1, QTableWidgetItem(usuario.id_usuario))
             self.tabla_usuarios.setItem(row, 2, QTableWidgetItem(usuario.email))
-            
-            # Botón Editar
             btn_editar = QPushButton("✏️ Editar")
             btn_editar.clicked.connect(lambda checked, u=usuario: self.editar_usuario(u))
             self.tabla_usuarios.setCellWidget(row, 3, btn_editar)
-            
-            # Botón Eliminar
             btn_eliminar = QPushButton("❌ Eliminar")
             btn_eliminar.clicked.connect(lambda checked, u=usuario: self.eliminar_usuario(u))
             self.tabla_usuarios.setCellWidget(row, 4, btn_eliminar)
-            
             row += 1
-            actual = actual.siguiente
-            
+            row = self._recorrer_arbol_usuarios(nodo.derecha, row)
+        return row
+
     def actualizar_tabla_prestamos(self):
         self.tabla_prestamos.setRowCount(0)
         row = 0
@@ -294,7 +290,7 @@ class BibliotecaGUI(QMainWindow):
                     isbn=dialog.isbn_input.text(),
                     cantidad_disponible=int(dialog.cantidad_input.text())
                 )
-                self.libros.agregar(nuevo_libro)
+                self.libros.agregar(nuevo_libro) 
                 self.actualizar_tabla_libros()
                 QMessageBox.information(self, "Éxito", "Libro agregado correctamente")
             except ValueError:
@@ -309,13 +305,13 @@ class BibliotecaGUI(QMainWindow):
                     id_usuario=dialog.id_input.text(),
                     email=dialog.email_input.text()
                 )
-                self.usuarios.agregar(nuevo_usuario)
+                self.usuarios.agregar(nuevo_usuario) 
                 self.actualizar_tabla_usuarios()
                 QMessageBox.information(self, "Éxito", "Usuario agregado correctamente")
             except ValueError:
                 QMessageBox.warning(self, "Error", "Por favor, ingrese datos válidos")
         
-    def mostrar_prestar_libro(self):
+    def mostrar_prestar_libro(self): 
         if self.libros.esta_vacia():
             logging.warning("Intento de préstamo sin libros registrados")
             QMessageBox.warning(self, "Error", "No hay libros registrados")
@@ -355,7 +351,7 @@ class BibliotecaGUI(QMainWindow):
         item = self.tabla_libros.itemAt(position)
         if item:
             row = item.row()
-            libro = self.obtener_libro_por_isbn(self.tabla_libros.item(row, 2).text())
+            libro = self.obtener_libro_por_isbn(self.tabla_libros.item(row, 2).text()) 
             
             editar_action.triggered.connect(lambda: self.editar_libro(libro))
             eliminar_action.triggered.connect(lambda: self.eliminar_libro(libro))
@@ -400,7 +396,7 @@ class BibliotecaGUI(QMainWindow):
         if dialog.exec_() == QDialog.Accepted:
             try:
                 libro.titulo = dialog.titulo_input.text()
-                libro.autor = dialog.autor_input.text()
+                libro.autor = dialog.autor_input.text() 
                 libro.isbn = dialog.isbn_input.text()
                 libro.cantidad_disponible = int(dialog.cantidad_input.text())
                 self.actualizar_tabla_libros()
@@ -426,7 +422,8 @@ class BibliotecaGUI(QMainWindow):
             QMessageBox.warning(self, "Error", "No se puede eliminar un libro que está prestado")
             return
             
-        if self.libros.eliminar(libro):
+        libro_a_eliminar = self.libros.buscar(libro.get_id())
+        if libro_a_eliminar and self.libros.eliminar(libro.get_id()):
             self.actualizar_tabla_libros()
             QMessageBox.information(self, "Éxito", "Libro eliminado correctamente")
         else:
@@ -437,9 +434,10 @@ class BibliotecaGUI(QMainWindow):
             QMessageBox.warning(self, "Error", "No se puede eliminar un usuario con libros prestados")
             return
             
-        if self.usuarios.eliminar(usuario):
+        usuario_a_eliminar = self.usuarios.buscar(usuario.get_id())
+        if usuario_a_eliminar and self.usuarios.eliminar(usuario.get_id()):
             self.actualizar_tabla_usuarios()
-            QMessageBox.information(self, "Éxito", "Usuario eliminado correctamente")
+            QMessageBox.information(self, "Éxito", "Usuario eliminado correctamente") 
         else:
             QMessageBox.warning(self, "Error", "No se pudo eliminar el usuario")
     
@@ -451,14 +449,15 @@ class BibliotecaGUI(QMainWindow):
         else:
             QMessageBox.warning(self, "Error", "No se pudo devolver el libro")
     
-    def obtener_libro_por_isbn(self, isbn):
-        return self.libros.buscar(lambda l: l.isbn == isbn)
+    def obtener_libro_por_isbn(self, isbn): 
+        return self.libros.buscar(isbn)
     
-    def obtener_usuario_por_id(self, id_usuario):
-        return self.usuarios.buscar(lambda u: u.id_usuario == id_usuario)
+    def obtener_usuario_por_id(self, id_usuario): 
+        return self.usuarios.buscar(id_usuario)
     
-    def obtener_usuario_por_nombre(self, nombre):
-        return self.usuarios.buscar(lambda u: u.nombre == nombre)
+    def obtener_usuario_por_nombre(self, nombre): 
+        actual_usuario = self.usuarios.raiz
+        return None
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

@@ -7,6 +7,9 @@ class Usuario:
         
     def __str__(self):
         return f"{self.nombre} (ID: {self.id_usuario})"
+    
+    def get_id(self):
+        return self.id_usuario
         
     def tomar_prestado(self, libro):
         if libro.prestar(self):

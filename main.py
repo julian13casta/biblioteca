@@ -261,24 +261,24 @@ class BibliotecaGUI(QMainWindow):
 
     def actualizar_tabla_prestamos(self):
         self.tabla_prestamos.setRowCount(0)
-        row = 0
-        actual_usuario = self.usuarios.cabeza
-        while actual_usuario:
-            usuario = actual_usuario.dato
+        self._recorrer_arbol_prestamos(self.usuarios.raiz, 0)
+
+    def _recorrer_arbol_prestamos(self, nodo, row):
+        if nodo is not None:
+            row = self._recorrer_arbol_prestamos(nodo.izquierda, row)
+            usuario = nodo.dato
             for libro in usuario.libros_prestados:
                 self.tabla_prestamos.insertRow(row)
-                self.tabla_prestamos.setRowHeight(row, 50)  # Establecer altura de la fila
+                self.tabla_prestamos.setRowHeight(row, 50)
                 self.tabla_prestamos.setItem(row, 0, QTableWidgetItem(usuario.nombre))
                 self.tabla_prestamos.setItem(row, 1, QTableWidgetItem(libro.titulo))
                 self.tabla_prestamos.setItem(row, 2, QTableWidgetItem(libro.isbn))
-                
-                # Botón Devolver
                 btn_devolver = QPushButton("📚 Devolver")
                 btn_devolver.clicked.connect(lambda checked, u=usuario, l=libro: self.devolver_libro(u, l))
                 self.tabla_prestamos.setCellWidget(row, 3, btn_devolver)
-                
                 row += 1
-            actual_usuario = actual_usuario.siguiente
+            row = self._recorrer_arbol_prestamos(nodo.derecha, row)
+        return row
     
     def mostrar_agregar_libro(self):
         dialog = AgregarLibroDialog(self)

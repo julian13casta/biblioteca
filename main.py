@@ -313,13 +313,15 @@ class BibliotecaGUI(QMainWindow):
         
     def mostrar_prestar_libro(self): 
         if self.libros.esta_vacio() or self.usuarios.esta_vacio():
-            if self.libros.esta_vacio():
-            logging.warning("Intento de préstamo sin libros registrados")
-            QMessageBox.warning(self, "Error", "No hay libros registrados")
+            if self.libros.esta_vacio():                
+                logging.warning("Intento de préstamo sin libros registrados")
+                QMessageBox.warning(self, "Error", "No hay libros registrados")
             elif self.usuarios.esta_vacio():
-            QMessageBox.warning(self, "Error", "No hay usuarios registrados")
-            return    
-
+                logging.warning("Intento de préstamo sin usuarios registrados")
+                QMessageBox.warning(self, "Error", "No hay usuarios registrados")
+            return 
+            
+           
         else:
             dialog = PrestarLibroDialog(self.libros, self.usuarios, self)
             if dialog.exec_() == QDialog.Accepted:

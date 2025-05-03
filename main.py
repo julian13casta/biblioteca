@@ -420,29 +420,33 @@ class BibliotecaGUI(QMainWindow):
             except ValueError:
                 QMessageBox.warning(self, "Error", "Por favor, ingrese datos válidos")
     
-    def eliminar_libro(self, libro):
+    def eliminar_libro(self, libro):        
         if libro.prestamos:
             QMessageBox.warning(self, "Error", "No se puede eliminar un libro que está prestado")
-            return
-            
+            return            
+
         libro_a_eliminar = self.libros.buscar(libro.get_id())
-        if libro_a_eliminar is not None and self.libros.eliminar(libro.get_id()):
-            self.actualizar_tabla_libros()
-            QMessageBox.information(self, "Éxito", "Libro eliminado correctamente")
-        else:
-            QMessageBox.warning(self, "Error", "No se pudo eliminar el libro")    
+        if libro_a_eliminar is None:
+             QMessageBox.warning(self, "Error", "No se pudo eliminar el libro") 
+             return
+        
+        self.libros.eliminar(libro.get_id())
+        self.actualizar_tabla_libros()
+        QMessageBox.information(self, "Éxito", "Libro eliminado correctamente")
     
     def eliminar_usuario(self, usuario):
         if usuario.libros_prestados:
             QMessageBox.warning(self, "Error", "No se puede eliminar un usuario con libros prestados")
             return
             
-        usuario_a_eliminar = self.usuarios.buscar(usuario.get_id())
-        if usuario_a_eliminar is not None and self.usuarios.eliminar(usuario.get_id()):
-            self.actualizar_tabla_usuarios()
-            QMessageBox.information(self, "Éxito", "Usuario eliminado correctamente") 
-        else:
-            QMessageBox.warning(self, "Error", "No se pudo eliminar el usuario")    
+        usuario_a_eliminar = self.usuarios.buscar(usuario.get_id())        
+        if usuario_a_eliminar is None:
+            QMessageBox.warning(self, "Error", "No se pudo eliminar el usuario")
+            return
+        
+        self.usuarios.eliminar(usuario.get_id())
+        self.actualizar_tabla_usuarios()
+        QMessageBox.information(self, "Éxito", "Usuario eliminado correctamente")
     
     def devolver_libro(self, usuario, libro):
         if usuario.devolver_libro(libro):

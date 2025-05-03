@@ -312,33 +312,34 @@ class BibliotecaGUI(QMainWindow):
                 QMessageBox.warning(self, "Error", "Por favor, ingrese datos válidos")
         
     def mostrar_prestar_libro(self): 
-        if self.libros.esta_vacio():
+        if self.libros.esta_vacio() or self.usuarios.esta_vacio():
+            if self.libros.esta_vacio():
             logging.warning("Intento de préstamo sin libros registrados")
             QMessageBox.warning(self, "Error", "No hay libros registrados")
-            return
-        if self.usuarios.esta_vacia():
+            elif self.usuarios.esta_vacio():
             QMessageBox.warning(self, "Error", "No hay usuarios registrados")
-            return
-        
-        dialog = PrestarLibroDialog(self.libros, self.usuarios, self)
-        if dialog.exec_() == QDialog.Accepted:
-            usuario = dialog.usuario_seleccionado
-            libro = dialog.libro_seleccionado
-            
-            if usuario.tomar_prestado(libro):
-                self.actualizar_tabla_libros()
-                self.actualizar_tabla_prestamos()
-                QMessageBox.information(
-                    self, 
-                    "Éxito", 
-                    f"Libro '{libro.titulo}' prestado a {usuario.nombre}"
-                )
-            else:
-                QMessageBox.warning(
-                    self, 
-                    "Error", 
-                    "No se pudo realizar el préstamo"
-                )
+            return    
+
+        else:
+            dialog = PrestarLibroDialog(self.libros, self.usuarios, self)
+            if dialog.exec_() == QDialog.Accepted:
+                usuario = dialog.usuario_seleccionado
+                libro = dialog.libro_seleccionado
+                
+                if usuario.tomar_prestado(libro):
+                    self.actualizar_tabla_libros()
+                    self.actualizar_tabla_prestamos()
+                    QMessageBox.information(
+                        self, 
+                        "Éxito", 
+                        f"Libro '{libro.titulo}' prestado a {usuario.nombre}"
+                    )
+                else:
+                    QMessageBox.warning(
+                        self, 
+                        "Error", 
+                        "No se pudo realizar el préstamo"
+                    )
 
     def mostrar_menu_libro(self, position):
         menu = QMenu()

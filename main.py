@@ -426,11 +426,11 @@ class BibliotecaGUI(QMainWindow):
             return
             
         libro_a_eliminar = self.libros.buscar(libro.get_id())
-        if libro_a_eliminar and self.libros.eliminar(libro.get_id()):
+        if libro_a_eliminar is not None and self.libros.eliminar(libro.get_id()):
             self.actualizar_tabla_libros()
             QMessageBox.information(self, "Éxito", "Libro eliminado correctamente")
         else:
-            QMessageBox.warning(self, "Error", "No se pudo eliminar el libro")
+            QMessageBox.warning(self, "Error", "No se pudo eliminar el libro")    
     
     def eliminar_usuario(self, usuario):
         if usuario.libros_prestados:
@@ -438,11 +438,11 @@ class BibliotecaGUI(QMainWindow):
             return
             
         usuario_a_eliminar = self.usuarios.buscar(usuario.get_id())
-        if usuario_a_eliminar and self.usuarios.eliminar(usuario.get_id()):
+        if usuario_a_eliminar is not None and self.usuarios.eliminar(usuario.get_id()):
             self.actualizar_tabla_usuarios()
             QMessageBox.information(self, "Éxito", "Usuario eliminado correctamente") 
         else:
-            QMessageBox.warning(self, "Error", "No se pudo eliminar el usuario")
+            QMessageBox.warning(self, "Error", "No se pudo eliminar el usuario")    
     
     def devolver_libro(self, usuario, libro):
         if usuario.devolver_libro(libro):
@@ -458,9 +458,20 @@ class BibliotecaGUI(QMainWindow):
     def obtener_usuario_por_id(self, id_usuario): 
         return self.usuarios.buscar(id_usuario)
     
-    def obtener_usuario_por_nombre(self, nombre): 
-        actual_usuario = self.usuarios.raiz
-        return None
+    def obtener_usuario_por_nombre(self, nombre_buscado):
+        self.usuario_encontrado = None
+        self._recorrer_arbol_usuarios_busqueda(self.usuarios.raiz, nombre_buscado)
+        return self.usuario_encontrado
+    
+    def _recorrer_arbol_usuarios_busqueda(self, nodo, nombre_buscado):
+        if nodo is not None:
+            self._recorrer_arbol_usuarios_busqueda(nodo.izquierda, nombre_buscado)
+            usuario = nodo.dato
+            if usuario.nombre == nombre_buscado:
+                self.usuario_encontrado = usuario
+                return 
+            self._recorrer_arbol_usuarios_busqueda(nodo.derecha, nombre_buscado)
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

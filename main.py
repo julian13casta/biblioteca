@@ -312,7 +312,7 @@ class BibliotecaGUI(QMainWindow):
                 QMessageBox.warning(self, "Error", "Por favor, ingrese datos válidos")
         
     def mostrar_prestar_libro(self): 
-        if self.libros.esta_vacia():
+        if self.libros.esta_vacio():
             logging.warning("Intento de préstamo sin libros registrados")
             QMessageBox.warning(self, "Error", "No hay libros registrados")
             return

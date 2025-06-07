@@ -9,16 +9,16 @@ from PyQt5.QtWidgets import (
 
 
 class PrestarLibroDialog(QDialog):
-    def __init__(self, libros, usuarios, parent=None):
-
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Prestar Libro")
-        self.libros = libros
-        self.usuarios = usuarios
+        self.libros = parent.libros
+        self.usuarios = parent.usuarios
+        self.libro_seleccionado = None
+        self.usuario_seleccionado = None
         self.setup_ui()
         
     def setup_ui(self):
-
         layout = QVBoxLayout()
 
         # Selector de libro
@@ -47,25 +47,20 @@ class PrestarLibroDialog(QDialog):
     def _recorrer_arbol_libros(self, nodo):
         if nodo is not None:
             self._recorrer_arbol_libros(nodo.izquierda)
-
             libro = nodo.dato
             if libro.cantidad_disponible > 0:
-                self.combo_libros.addItem(str(libro), libro)
-
+                self.combo_libros.addItem(f"{libro.titulo} - {libro.autor}", libro)
             self._recorrer_arbol_libros(nodo.derecha)
 
     def actualizar_combo_usuarios(self):
-
         self.combo_usuarios.clear()
         self._recorrer_arbol_usuarios(self.usuarios.raiz)
 
     def _recorrer_arbol_usuarios(self, nodo):
         if nodo is not None:
             self._recorrer_arbol_usuarios(nodo.izquierda)
-
             usuario = nodo.dato
-            self.combo_usuarios.addItem(str(usuario), usuario)
-
+            self.combo_usuarios.addItem(f"{usuario.nombre} ({usuario.id_usuario})", usuario)
             self._recorrer_arbol_usuarios(nodo.derecha)
 
     def validar_prestamo(self):
@@ -78,4 +73,17 @@ class PrestarLibroDialog(QDialog):
 
         self.libro_seleccionado = self.combo_libros.currentData()
         self.usuario_seleccionado = self.combo_usuarios.currentData()
-        self.accept() 
+
+        if self.libro_seleccionado is None or self.usuario_seleccionado is None:
+            QMessageBox.warning(self, "Error", "Por favor seleccione un libro y un usuario")
+            return
+
+        if self.libro_seleccionado.cantidad_disponible <= 0:
+            QMessageBox.warning(self, "Error", "No hay ejemplares disponibles de este libro")
+            return
+
+        self.accept()
+
+    def obtener_prestamo(self):
+        """Retorna el usuario y libro seleccionados para el préstamo."""
+        return self.usuario_seleccionado, self.libro_seleccionado 

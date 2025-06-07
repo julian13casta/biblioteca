@@ -1,4 +1,5 @@
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton
+from models.libro import Libro
 
 class AgregarLibroDialog(QDialog):
     def __init__(self, parent=None):
@@ -30,4 +31,13 @@ class AgregarLibroDialog(QDialog):
         btn_guardar.clicked.connect(self.accept)
         layout.addWidget(btn_guardar)
         
-        self.setLayout(layout) 
+        self.setLayout(layout)
+
+    def obtener_libro(self) -> Libro:
+        """Retorna un nuevo objeto Libro con los datos ingresados."""
+        return Libro(
+            titulo=self.titulo_input.text(),
+            autor=self.autor_input.text(),
+            isbn=self.isbn_input.text(),
+            cantidad_disponible=int(self.cantidad_input.text())
+        ) 

@@ -1,0 +1,32 @@
+[
+  {
+    "nombre": "Juan Pérez",
+    "id_usuario": "U001",
+    "email": "juan@email.com"
+  },
+  {
+    "nombre": "María García",
+    "id_usuario": "U002",
+    "email": "maria@email.com"
+  },
+  {
+    "nombre": "Carlos López",
+    "id_usuario": "U003",
+    "email": "carlos@email.com"
+  },
+  {
+    "nombre": "Ana Martínez",
+    "id_usuario": "U004",
+    "email": "ana@email.com"
+  },
+  {
+    "nombre": "Pedro Sánchez",
+    "id_usuario": "U005",
+    "email": "pedro@email.com"
+  },
+  {
+    "nombre": "Julian Castañeda",
+    "id_usuario": "U006",
+    "email": "julian13casta@gmail.com"
+  }
+]

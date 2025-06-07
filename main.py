@@ -1,4 +1,6 @@
 import sys
+import os
+import json
 from PyQt5.QtWidgets import (
     QApplication, 
     QMainWindow, 
@@ -21,6 +23,7 @@ from PyQt5.QtGui import QPalette, QColor, QFont
 from models.libro import Libro
 from models.usuario import Usuario
 from estructuras.arbol_binario_busqueda import ArbolBinarioBusqueda
+from estructuras.grafo import Grafo
 from dialogs.agregar_libro_dialog import AgregarLibroDialog
 from dialogs.agregar_usuario_dialog import AgregarUsuarioDialog
 from dialogs.prestar_libro_dialog import PrestarLibroDialog
@@ -47,10 +50,14 @@ class BibliotecaGUI(QMainWindow):
         # Inicializar estructuras de datos
         self.libros = ArbolBinarioBusqueda()
         self.usuarios = ArbolBinarioBusqueda()
-        
-        # Configurar la interfaz
+        self.grafo = Grafo()  # Nueva estructura de datos
+        self.data_dir = os.path.join(os.path.dirname(__file__), 'data')
+        self.cargar_datos_archivos()
         self.configurar_ui()
-        
+        self.actualizar_tabla_libros()
+        self.actualizar_tabla_usuarios()
+        self.actualizar_tabla_prestamos()
+                
     def configurar_estilo(self):
         # Establecer la paleta de colores
         paleta = QPalette()
@@ -139,6 +146,17 @@ class BibliotecaGUI(QMainWindow):
         btn_prestar_libro = QPushButton("📚 Prestar Libro")
         btn_prestar_libro.clicked.connect(self.mostrar_prestar_libro)
         panel_botones.addWidget(btn_prestar_libro)
+        
+        # Agregar botones para nuevas funcionalidades
+        btn_libros_relacionados = QPushButton("📚 Libros Relacionados")
+        btn_libros_relacionados.clicked.connect(lambda: self.mostrar_libros_relacionados(
+            self.obtener_libro_seleccionado()))
+        panel_botones.addWidget(btn_libros_relacionados)
+
+        btn_recomendaciones = QPushButton("🎯 Recomendaciones")
+        btn_recomendaciones.clicked.connect(lambda: self.mostrar_recomendaciones_usuario(
+            self.obtener_usuario_seleccionado()))
+        panel_botones.addWidget(btn_recomendaciones)
         
         panel_botones.addStretch()
         
@@ -260,88 +278,147 @@ class BibliotecaGUI(QMainWindow):
         return row
 
     def actualizar_tabla_prestamos(self):
+        """Actualiza la tabla de préstamos activos usando el grafo."""
         self.tabla_prestamos.setRowCount(0)
-        self._recorrer_arbol_prestamos(self.usuarios.raiz, 0)
+        row = 0
 
-    def _recorrer_arbol_prestamos(self, nodo, row):
+        # Recorrer todos los nodos del grafo
+        for nodo_id, nodo in self.grafo.nodos.items():
+            if nodo.tipo == 'usuario':  # Si es un usuario
+                usuario = nodo.datos
+                # Buscar los libros prestados por este usuario
+                for vecino_id, peso in nodo.vecinos.items():
+                    if self.grafo.nodos[vecino_id].tipo == 'libro':
+                        libro = self.grafo.nodos[vecino_id].datos
+                        # Agregar el préstamo a la tabla
+                        self.tabla_prestamos.insertRow(row)
+                        self.tabla_prestamos.setItem(row, 0, QTableWidgetItem(usuario.nombre))
+                        self.tabla_prestamos.setItem(row, 1, QTableWidgetItem(libro.titulo))
+                        self.tabla_prestamos.setItem(row, 2, QTableWidgetItem(libro.isbn))
+                        
+                        # Botón de devolver
+                        btn_devolver = QPushButton("Devolver")
+                        btn_devolver.clicked.connect(lambda checked, u=usuario, l=libro: self.devolver_libro(u, l))
+                        self.tabla_prestamos.setCellWidget(row, 3, btn_devolver)
+                        
+                        row += 1
+
+    def closeEvent(self, event):
+        self.guardar_datos_archivos()
+        event.accept()
+
+    # --- Persistencia ---
+    def cargar_datos_archivos(self):
+        # Cargar libros
+        libros_path = os.path.join(self.data_dir, 'libros.json')
+        usuarios_path = os.path.join(self.data_dir, 'usuarios.json')
+        prestamos_path = os.path.join(self.data_dir, 'prestamos.json')
+        if os.path.exists(libros_path):
+            with open(libros_path, 'r', encoding='utf-8') as f:
+                libros_data = json.load(f)
+                for l in libros_data:
+                    libro = Libro(**l)
+                    self.libros.agregar(libro)
+                    self.grafo.agregar_nodo(libro.isbn, 'libro', libro)
+        if os.path.exists(usuarios_path):
+            with open(usuarios_path, 'r', encoding='utf-8') as f:
+                usuarios_data = json.load(f)
+                for u in usuarios_data:
+                    usuario = Usuario(**u)
+                    self.usuarios.agregar(usuario)
+                    self.grafo.agregar_nodo(usuario.id_usuario, 'usuario', usuario)
+        if os.path.exists(prestamos_path):
+            with open(prestamos_path, 'r', encoding='utf-8') as f:
+                prestamos_data = json.load(f)
+                for p in prestamos_data:
+                    self.grafo.agregar_arista(p['usuario_id'], p['libro_isbn'])
+                    libro = self.obtener_libro_por_isbn(p['libro_isbn'])
+                    if libro:
+                        libro.cantidad_disponible -= 1
+
+    def guardar_datos_archivos(self):
+        libros_path = os.path.join(self.data_dir, 'libros.json')
+        usuarios_path = os.path.join(self.data_dir, 'usuarios.json')
+        prestamos_path = os.path.join(self.data_dir, 'prestamos.json')
+        # Serializar libros
+        libros = []
+        self._recorrer_arbol_serializar(self.libros.raiz, libros, tipo='libro')
+        with open(libros_path, 'w', encoding='utf-8') as f:
+            json.dump(libros, f, ensure_ascii=False, indent=2)
+        # Serializar usuarios
+        usuarios = []
+        self._recorrer_arbol_serializar(self.usuarios.raiz, usuarios, tipo='usuario')
+        with open(usuarios_path, 'w', encoding='utf-8') as f:
+            json.dump(usuarios, f, ensure_ascii=False, indent=2)
+        # Serializar préstamos (aristas del grafo)
+        prestamos = []
+        for nodo_id, nodo in self.grafo.nodos.items():
+            if nodo.tipo == 'usuario':
+                for vecino_id in nodo.vecinos:
+                    if self.grafo.nodos[vecino_id].tipo == 'libro':
+                        prestamos.append({'usuario_id': nodo_id, 'libro_isbn': vecino_id})
+        with open(prestamos_path, 'w', encoding='utf-8') as f:
+            json.dump(prestamos, f, ensure_ascii=False, indent=2)
+
+    def _recorrer_arbol_serializar(self, nodo, lista, tipo):
         if nodo is not None:
-            row = self._recorrer_arbol_prestamos(nodo.izquierda, row)
-            usuario = nodo.dato
-            for libro in usuario.libros_prestados:
-                self.tabla_prestamos.insertRow(row)
-                self.tabla_prestamos.setRowHeight(row, 50)
-                self.tabla_prestamos.setItem(row, 0, QTableWidgetItem(usuario.nombre))
-                self.tabla_prestamos.setItem(row, 1, QTableWidgetItem(libro.titulo))
-                self.tabla_prestamos.setItem(row, 2, QTableWidgetItem(libro.isbn))
-                btn_devolver = QPushButton("📚 Devolver")
-                btn_devolver.clicked.connect(lambda checked, u=usuario, l=libro: self.devolver_libro(u, l))
-                self.tabla_prestamos.setCellWidget(row, 3, btn_devolver)
-                row += 1
-            row = self._recorrer_arbol_prestamos(nodo.derecha, row)
-        return row
-    
+            self._recorrer_arbol_serializar(nodo.izquierda, lista, tipo)
+            if tipo == 'libro':
+                lista.append({
+                    'titulo': nodo.dato.titulo,
+                    'autor': nodo.dato.autor,
+                    'isbn': nodo.dato.isbn,
+                    'cantidad_disponible': nodo.dato.cantidad_disponible
+                })
+            elif tipo == 'usuario':
+                lista.append({
+                    'nombre': nodo.dato.nombre,
+                    'id_usuario': nodo.dato.id_usuario,
+                    'email': nodo.dato.email
+                })
+            self._recorrer_arbol_serializar(nodo.derecha, lista, tipo)
+
+    # --- Modificar métodos para guardar automáticamente ---
     def mostrar_agregar_libro(self):
         dialog = AgregarLibroDialog(self)
-        if dialog.exec_() == QDialog.Accepted:
-            try:
-                nuevo_libro = Libro(
-                    titulo=dialog.titulo_input.text(),
-                    autor=dialog.autor_input.text(),
-                    isbn=dialog.isbn_input.text(),
-                    cantidad_disponible=int(dialog.cantidad_input.text())
-                )
-                self.libros.agregar(nuevo_libro) 
-                self.actualizar_tabla_libros()
-                QMessageBox.information(self, "Éxito", "Libro agregado correctamente")
-            except ValueError:
-                QMessageBox.warning(self, "Error", "Por favor, ingrese datos válidos")
-        
+        if dialog.exec_():
+            libro = dialog.obtener_libro()
+            self.libros.agregar(libro)
+            self.grafo.agregar_nodo(libro.isbn, 'libro', libro)
+            self.guardar_datos_archivos()
+            self.actualizar_tabla_libros()
+
     def mostrar_agregar_usuario(self):
         dialog = AgregarUsuarioDialog(self)
-        if dialog.exec_() == QDialog.Accepted:
-            try:
-                nuevo_usuario = Usuario(
-                    nombre=dialog.nombre_input.text(),
-                    id_usuario=dialog.id_input.text(),
-                    email=dialog.email_input.text()
-                )
-                self.usuarios.agregar(nuevo_usuario) 
-                self.actualizar_tabla_usuarios()
-                QMessageBox.information(self, "Éxito", "Usuario agregado correctamente")
-            except ValueError:
-                QMessageBox.warning(self, "Error", "Por favor, ingrese datos válidos")
-        
-    def mostrar_prestar_libro(self): 
-        if self.libros.esta_vacio() or self.usuarios.esta_vacio():
-            if self.libros.esta_vacio():                
-                logging.warning("Intento de préstamo sin libros registrados")
-                QMessageBox.warning(self, "Error", "No hay libros registrados")
-            elif self.usuarios.esta_vacio():
-                logging.warning("Intento de préstamo sin usuarios registrados")
-                QMessageBox.warning(self, "Error", "No hay usuarios registrados")
-            return 
-            
-           
-        else:
-            dialog = PrestarLibroDialog(self.libros, self.usuarios, self)
-            if dialog.exec_() == QDialog.Accepted:
-                usuario = dialog.usuario_seleccionado
-                libro = dialog.libro_seleccionado
-                
-                if usuario.tomar_prestado(libro):
+        if dialog.exec_():
+            usuario = dialog.obtener_usuario()
+            self.usuarios.agregar(usuario)
+            self.grafo.agregar_nodo(usuario.id_usuario, 'usuario', usuario)
+            self.guardar_datos_archivos()
+            self.actualizar_tabla_usuarios()
+
+    def mostrar_prestar_libro(self):
+        if self.libros.esta_vacio():
+            QMessageBox.warning(self, "Error", "No hay libros registrados")
+            return
+        if self.usuarios.esta_vacio():
+            QMessageBox.warning(self, "Error", "No hay usuarios registrados")
+            return
+        dialog = PrestarLibroDialog(self)
+        if dialog.exec_():
+            usuario, libro = dialog.obtener_prestamo()
+            if usuario and libro:
+                if libro.cantidad_disponible > 0:
+                    libro.cantidad_disponible -= 1
+                    self.grafo.agregar_arista(usuario.id_usuario, libro.isbn)
+                    self.guardar_datos_archivos()
                     self.actualizar_tabla_libros()
                     self.actualizar_tabla_prestamos()
-                    QMessageBox.information(
-                        self, 
-                        "Éxito", 
-                        f"Libro '{libro.titulo}' prestado a {usuario.nombre}"
-                    )
+                    QMessageBox.information(self, "Éxito", 
+                        f"Libro '{libro.titulo}' prestado a {usuario.nombre}")
                 else:
-                    QMessageBox.warning(
-                        self, 
-                        "Error", 
-                        "No se pudo realizar el préstamo"
-                    )
+                    QMessageBox.warning(self, "Error", 
+                        "No hay ejemplares disponibles de este libro.")
 
     def mostrar_menu_libro(self, position):
         menu = QMenu()
@@ -403,6 +480,7 @@ class BibliotecaGUI(QMainWindow):
                 libro.isbn = dialog.isbn_input.text()
                 libro.cantidad_disponible = int(dialog.cantidad_input.text())
                 self.actualizar_tabla_libros()
+                self.guardar_datos_archivos()
                 QMessageBox.information(self, "Éxito", "Libro actualizado correctamente")
             except ValueError:
                 QMessageBox.warning(self, "Error", "Por favor, ingrese datos válidos")
@@ -416,6 +494,7 @@ class BibliotecaGUI(QMainWindow):
                 usuario.email = dialog.email_input.text()
                 self.actualizar_tabla_usuarios()
                 self.actualizar_tabla_prestamos()  # Por si cambió el nombre
+                self.guardar_datos_archivos()
                 QMessageBox.information(self, "Éxito", "Usuario actualizado correctamente")
             except ValueError:
                 QMessageBox.warning(self, "Error", "Por favor, ingrese datos válidos")
@@ -432,6 +511,7 @@ class BibliotecaGUI(QMainWindow):
         
         self.libros.eliminar(libro.get_id())
         self.actualizar_tabla_libros()
+        self.guardar_datos_archivos()
         QMessageBox.information(self, "Éxito", "Libro eliminado correctamente")
     
     def eliminar_usuario(self, usuario):
@@ -446,16 +526,27 @@ class BibliotecaGUI(QMainWindow):
         
         self.usuarios.eliminar(usuario.get_id())
         self.actualizar_tabla_usuarios()
+        self.guardar_datos_archivos()
         QMessageBox.information(self, "Éxito", "Usuario eliminado correctamente")
     
     def devolver_libro(self, usuario, libro):
-        if usuario.devolver_libro(libro):
+        """Maneja la devolución de un libro."""
+        if QMessageBox.question(self, "Confirmar", 
+                              f"¿Desea devolver el libro {libro.titulo}?") == QMessageBox.Yes:
+            # Actualizar cantidad disponible
+            libro.cantidad_disponible += 1
+            
+            # Eliminar la arista del grafo
+            self.grafo.eliminar_arista(usuario.id_usuario, libro.isbn)
+            
+            # Actualizar las tablas
             self.actualizar_tabla_libros()
             self.actualizar_tabla_prestamos()
-            QMessageBox.information(self, "Éxito", "Libro devuelto correctamente")
-        else:
-            QMessageBox.warning(self, "Error", "No se pudo devolver el libro")
-    
+            self.guardar_datos_archivos()
+            
+            QMessageBox.information(self, "Éxito", 
+                                  f"Libro '{libro.titulo}' devuelto correctamente")
+
     def obtener_libro_por_isbn(self, isbn): 
         return self.libros.buscar(isbn)
     
@@ -475,6 +566,54 @@ class BibliotecaGUI(QMainWindow):
                 self.usuario_encontrado = usuario
                 return 
             self._recorrer_arbol_usuarios_busqueda(nodo.derecha, nombre_buscado)
+
+    def mostrar_libros_relacionados(self, libro):
+        """Muestra los libros relacionados con el libro seleccionado."""
+        if libro is None:
+            QMessageBox.warning(self, "Error", "Por favor, seleccione un libro primero.")
+            return
+            
+        libros_relacionados = self.grafo.obtener_libros_relacionados(libro.isbn)
+        if libros_relacionados:
+            mensaje = f"Libros relacionados con {libro.titulo}:\n\n"
+            for libro_rel in libros_relacionados:
+                mensaje += f"- {libro_rel.titulo} ({libro_rel.autor})\n"
+            QMessageBox.information(self, "Libros Relacionados", mensaje)
+        else:
+            QMessageBox.information(self, "Libros Relacionados", 
+                                  f"No se encontraron libros relacionados con {libro.titulo}.")
+
+    def mostrar_recomendaciones_usuario(self, usuario):
+        """Muestra recomendaciones de libros para el usuario seleccionado."""
+        if usuario is None:
+            QMessageBox.warning(self, "Error", "Por favor, seleccione un usuario primero.")
+            return
+            
+        recomendaciones = self.grafo.obtener_recomendaciones_usuario(usuario.id_usuario)
+        if recomendaciones:
+            mensaje = f"Recomendaciones para {usuario.nombre}:\n\n"
+            for libro in recomendaciones:
+                mensaje += f"- {libro.titulo} ({libro.autor})\n"
+            QMessageBox.information(self, "Recomendaciones", mensaje)
+        else:
+            QMessageBox.information(self, "Recomendaciones", 
+                                  f"No hay recomendaciones disponibles para {usuario.nombre}.")
+
+    def obtener_libro_seleccionado(self):
+        """Retorna el libro seleccionado en la tabla de libros."""
+        fila = self.tabla_libros.currentRow()
+        if fila >= 0:
+            isbn = self.tabla_libros.item(fila, 2).text()
+            return self.obtener_libro_por_isbn(isbn)
+        return None
+
+    def obtener_usuario_seleccionado(self):
+        """Retorna el usuario seleccionado en la tabla de usuarios."""
+        fila = self.tabla_usuarios.currentRow()
+        if fila >= 0:
+            id_usuario = self.tabla_usuarios.item(fila, 1).text()
+            return self.obtener_usuario_por_id(id_usuario)
+        return None
 
 
 if __name__ == '__main__':

@@ -1,4 +1,5 @@
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton
+from models.usuario import Usuario
 
 class AgregarUsuarioDialog(QDialog):
     def __init__(self, parent=None):
@@ -27,4 +28,12 @@ class AgregarUsuarioDialog(QDialog):
         btn_guardar.clicked.connect(self.accept)
         layout.addWidget(btn_guardar)
         
-        self.setLayout(layout) 
+        self.setLayout(layout)
+
+    def obtener_usuario(self) -> Usuario:
+        """Retorna un nuevo objeto Usuario con los datos ingresados."""
+        return Usuario(
+            nombre=self.nombre_input.text(),
+            id_usuario=self.id_input.text(),
+            email=self.email_input.text()
+        ) 

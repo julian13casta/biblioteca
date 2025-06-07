@@ -1,0 +1,42 @@
+[
+  {
+    "usuario_id": "U001",
+    "libro_isbn": "978-84-450-7179-3"
+  },
+  {
+    "usuario_id": "U001",
+    "libro_isbn": "978-84-450-7178-6"
+  },
+  {
+    "usuario_id": "U002",
+    "libro_isbn": "978-84-206-5161-2"
+  },
+  {
+    "usuario_id": "U002",
+    "libro_isbn": "978-84-376-0494-7"
+  },
+  {
+    "usuario_id": "U003",
+    "libro_isbn": "978-84-239-1884-9"
+  },
+  {
+    "usuario_id": "U003",
+    "libro_isbn": "978-84-9838-326-5"
+  },
+  {
+    "usuario_id": "U004",
+    "libro_isbn": "978-84-450-7179-3"
+  },
+  {
+    "usuario_id": "U004",
+    "libro_isbn": "978-84-206-5162-9"
+  },
+  {
+    "usuario_id": "U005",
+    "libro_isbn": "978-84-206-5163-6"
+  },
+  {
+    "usuario_id": "U005",
+    "libro_isbn": "978-84-450-7178-6"
+  }
+]
